@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>采购报价分析助手 Agent</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#dfe4ee;--blue:#2563eb;--green:#087443;--amber:#a15c00;--red:#b42318}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+    .wrap{max-width:1440px;margin:0 auto;padding:24px}.hero{display:flex;justify-content:space-between;align-items:start;gap:20px;margin-bottom:18px}.hero h1{margin:0 0 4px;font-size:26px}.hero p{margin:0;color:var(--muted)}
+    .badge{background:#e8f0ff;color:#1746a2;border-radius:999px;padding:6px 11px;font-size:12px;white-space:nowrap}.grid{display:grid;grid-template-columns:440px 1fr;gap:18px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 2px 8px #24324d0a}.card h2{font-size:16px;margin:0 0 12px}.card h3{font-size:14px;margin:18px 0 8px}.hint{color:var(--muted);font-size:12px;margin:6px 0 12px}.rules{background:#f8fafc;border-radius:10px;padding:10px 12px;color:#475467;font-size:12px}.rules div{margin:3px 0}.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:600}button.primary{background:var(--blue);color:white}button.secondary{background:#eef2f7;color:#344054}button:hover{filter:brightness(.97)}textarea{width:100%;min-height:180px;border:1px solid var(--line);border-radius:10px;padding:12px;font:14px/1.6 "Microsoft YaHei",sans-serif;resize:vertical;background:#fbfcfe}.status{margin-top:10px;min-height:22px;color:var(--muted);font-size:12px}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.metric{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe}.metric .label{color:var(--muted);font-size:12px}.metric .value{font-size:18px;font-weight:700;margin-top:3px}.section{margin-top:16px}.section h2{font-size:16px;border-bottom:1px solid var(--line);padding-bottom:8px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:9px}table{width:100%;border-collapse:collapse;min-width:720px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #edf0f5;vertical-align:top;font-size:12px}th{background:#f8fafc;color:#475467;font-weight:700}tr:last-child td{border-bottom:0}.ok{color:var(--green);font-weight:700}.bad{color:var(--red);font-weight:700}.warn{color:var(--amber);font-weight:700}.pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;background:#eef2f7}.pill.ok{background:#e8f7ef}.pill.bad{background:#fff0ef}.pill.warn{background:#fff5df}.callout{border-left:4px solid var(--blue);background:#eff6ff;border-radius:8px;padding:11px 13px;margin:8px 0}.risk{border-left:4px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:10px 12px;margin:8px 0}.risk.high{border-left-color:#ef4444;background:#fff5f5}.risk.low{border-left-color:#22c55e;background:#f0fdf4}.muted{color:var(--muted)}ul{margin:6px 0 6px 20px;padding:0}.empty{padding:22px;color:var(--muted);text-align:center}.chat{height:310px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;padding:12px}.msg{max-width:94%;padding:10px 12px;border-radius:12px;margin:7px 0;white-space:pre-wrap}.agent{background:#eef4ff;border-top-left-radius:3px}.user{background:#eaf7ef;margin-left:auto;border-top-right-radius:3px}.step{font-size:11px;color:var(--muted);margin:4px 0 0}.schema{font:11px/1.5 Consolas,"Microsoft YaHei",monospace;white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);padding:9px;border-radius:8px;margin-top:8px}@media(max-width:980px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div><h1>采购报价分析助手</h1></div>
+  </div>
+  <div class="grid">
+    <section class="card">
+      <h2>采购报价分析对话</h2>
+      <div class="chat" id="chat"></div>
+      <textarea id="input" placeholder="请输入你的采购需求…如：采购 40 台仓库工业标签打印机，打印分辨率≥300 dpi…"></textarea>
+      <div class="upload" id="uploadArea" style="display:none;margin-top:10px;padding:10px;background:#f8fafc;border:1px dashed var(--line);border-radius:10px"><b>上传供应商 Excel</b><br><input id="xlsxFile" type="file" accept=".xlsx" style="max-width:100%"><button class="primary" id="readXlsx" style="margin-top:8px">读取并分析 Excel</button><div class="status" id="fileStatus"></div></div>
+      <div class="actions"><button class="primary" id="send">发送</button><button class="secondary" id="clear">重新开始</button></div>
+      <div class="status" id="status"></div>
+      <div class="status" id="stepHelp"></div>
+    </section>
+    <main class="card" id="result"><div class="empty">完成供应商信息输入后显示分析结果。</div></main>
+  </div>
+</div>
+<script>\n/** @license zlib.js 2012 - imaya [ https://github.com/imaya/zlib.js ] The MIT License */(function() {'use strict';var k=void 0,aa=this;function r(c,d){var a=c.split("."),b=aa;!(a[0]in b)&&b.execScript&&b.execScript("var "+a[0]);for(var e;a.length&&(e=a.shift());)!a.length&&d!==k?b[e]=d:b=b[e]?b[e]:b[e]={}};var t="undefined"!==typeof Uint8Array&&"undefined"!==typeof Uint16Array&&"undefined"!==typeof Uint32Array&&"undefined"!==typeof DataView;function u(c){var d=c.length,a=0,b=Number.POSITIVE_INFINITY,e,f,g,h,l,n,m,p,s,x;for(p=0;p<d;++p)c[p]>a&&(a=c[p]),c[p]<b&&(b=c[p]);e=1<<a;f=new (t?Uint32Array:Array)(e);g=1;h=0;for(l=2;g<=a;){for(p=0;p<d;++p)if(c[p]===g){n=0;m=h;for(s=0;s<g;++s)n=n<<1|m&1,m>>=1;x=g<<16|p;for(s=n;s<e;s+=l)f[s]=x;++h}++g;h<<=1;l<<=1}return[f,a,b]};function w(c,d){this.g=[];this.h=32768;this.c=this.f=this.d=this.k=0;this.input=t?new Uint8Array(c):c;this.l=!1;this.i=y;this.p=!1;if(d||!(d={}))d.index&&(this.d=d.index),d.bufferSize&&(this.h=d.bufferSize),d.bufferType&&(this.i=d.bufferType),d.resize&&(this.p=d.resize);switch(this.i){case A:this.a=32768;this.b=new (t?Uint8Array:Array)(32768+this.h+258);break;case y:this.a=0;this.b=new (t?Uint8Array:Array)(this.h);this.e=this.u;this.m=this.r;this.j=this.s;break;default:throw Error("invalid inflate mode");
+}}var A=0,y=1;
+w.prototype.t=function(){for(;!this.l;){var c=B(this,3);c&1&&(this.l=!0);c>>>=1;switch(c){case 0:var d=this.input,a=this.d,b=this.b,e=this.a,f=d.length,g=k,h=k,l=b.length,n=k;this.c=this.f=0;if(a+1>=f)throw Error("invalid uncompressed block header: LEN");g=d[a++]|d[a++]<<8;if(a+1>=f)throw Error("invalid uncompressed block header: NLEN");h=d[a++]|d[a++]<<8;if(g===~h)throw Error("invalid uncompressed block header: length verify");if(a+g>d.length)throw Error("input buffer is broken");switch(this.i){case A:for(;e+g>
+b.length;){n=l-e;g-=n;if(t)b.set(d.subarray(a,a+n),e),e+=n,a+=n;else for(;n--;)b[e++]=d[a++];this.a=e;b=this.e();e=this.a}break;case y:for(;e+g>b.length;)b=this.e({o:2});break;default:throw Error("invalid inflate mode");}if(t)b.set(d.subarray(a,a+g),e),e+=g,a+=g;else for(;g--;)b[e++]=d[a++];this.d=a;this.a=e;this.b=b;break;case 1:this.j(ba,ca);break;case 2:for(var m=B(this,5)+257,p=B(this,5)+1,s=B(this,4)+4,x=new (t?Uint8Array:Array)(C.length),Q=k,R=k,S=k,v=k,M=k,F=k,z=k,q=k,T=k,q=0;q<s;++q)x[C[q]]=
+B(this,3);if(!t){q=s;for(s=x.length;q<s;++q)x[C[q]]=0}Q=u(x);v=new (t?Uint8Array:Array)(m+p);q=0;for(T=m+p;q<T;)switch(M=D(this,Q),M){case 16:for(z=3+B(this,2);z--;)v[q++]=F;break;case 17:for(z=3+B(this,3);z--;)v[q++]=0;F=0;break;case 18:for(z=11+B(this,7);z--;)v[q++]=0;F=0;break;default:F=v[q++]=M}R=t?u(v.subarray(0,m)):u(v.slice(0,m));S=t?u(v.subarray(m)):u(v.slice(m));this.j(R,S);break;default:throw Error("unknown BTYPE: "+c);}}return this.m()};
+var E=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15],C=t?new Uint16Array(E):E,G=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258,258,258],H=t?new Uint16Array(G):G,I=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0],J=t?new Uint8Array(I):I,K=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],L=t?new Uint16Array(K):K,N=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,
+13],O=t?new Uint8Array(N):N,P=new (t?Uint8Array:Array)(288),U,da;U=0;for(da=P.length;U<da;++U)P[U]=143>=U?8:255>=U?9:279>=U?7:8;var ba=u(P),V=new (t?Uint8Array:Array)(30),W,ea;W=0;for(ea=V.length;W<ea;++W)V[W]=5;var ca=u(V);function B(c,d){for(var a=c.f,b=c.c,e=c.input,f=c.d,g=e.length,h;b<d;){if(f>=g)throw Error("input buffer is broken");a|=e[f++]<<b;b+=8}h=a&(1<<d)-1;c.f=a>>>d;c.c=b-d;c.d=f;return h}
+function D(c,d){for(var a=c.f,b=c.c,e=c.input,f=c.d,g=e.length,h=d[0],l=d[1],n,m;b<l&&!(f>=g);)a|=e[f++]<<b,b+=8;n=h[a&(1<<l)-1];m=n>>>16;if(m>b)throw Error("invalid code length: "+m);c.f=a>>m;c.c=b-m;c.d=f;return n&65535}
+w.prototype.j=function(c,d){var a=this.b,b=this.a;this.n=c;for(var e=a.length-258,f,g,h,l;256!==(f=D(this,c));)if(256>f)b>=e&&(this.a=b,a=this.e(),b=this.a),a[b++]=f;else{g=f-257;l=H[g];0<J[g]&&(l+=B(this,J[g]));f=D(this,d);h=L[f];0<O[f]&&(h+=B(this,O[f]));b>=e&&(this.a=b,a=this.e(),b=this.a);for(;l--;)a[b]=a[b++-h]}for(;8<=this.c;)this.c-=8,this.d--;this.a=b};
+w.prototype.s=function(c,d){var a=this.b,b=this.a;this.n=c;for(var e=a.length,f,g,h,l;256!==(f=D(this,c));)if(256>f)b>=e&&(a=this.e(),e=a.length),a[b++]=f;else{g=f-257;l=H[g];0<J[g]&&(l+=B(this,J[g]));f=D(this,d);h=L[f];0<O[f]&&(h+=B(this,O[f]));b+l>e&&(a=this.e(),e=a.length);for(;l--;)a[b]=a[b++-h]}for(;8<=this.c;)this.c-=8,this.d--;this.a=b};
+w.prototype.e=function(){var c=new (t?Uint8Array:Array)(this.a-32768),d=this.a-32768,a,b,e=this.b;if(t)c.set(e.subarray(32768,c.length));else{a=0;for(b=c.length;a<b;++a)c[a]=e[a+32768]}this.g.push(c);this.k+=c.length;if(t)e.set(e.subarray(d,d+32768));else for(a=0;32768>a;++a)e[a]=e[d+a];this.a=32768;return e};
+w.prototype.u=function(c){var d,a=this.input.length/this.d+1|0,b,e,f,g=this.input,h=this.b;c&&("number"===typeof c.o&&(a=c.o),"number"===typeof c.q&&(a+=c.q));2>a?(b=(g.length-this.d)/this.n[2],f=258*(b/2)|0,e=f<h.length?h.length+f:h.length<<1):e=h.length*a;t?(d=new Uint8Array(e),d.set(h)):d=h;return this.b=d};
+w.prototype.m=function(){var c=0,d=this.b,a=this.g,b,e=new (t?Uint8Array:Array)(this.k+(this.a-32768)),f,g,h,l;if(0===a.length)return t?this.b.subarray(32768,this.a):this.b.slice(32768,this.a);f=0;for(g=a.length;f<g;++f){b=a[f];h=0;for(l=b.length;h<l;++h)e[c++]=b[h]}f=32768;for(g=this.a;f<g;++f)e[c++]=d[f];this.g=[];return this.buffer=e};
+w.prototype.r=function(){var c,d=this.a;t?this.p?(c=new Uint8Array(d),c.set(this.b.subarray(0,d))):c=this.b.subarray(0,d):(this.b.length>d&&(this.b.length=d),c=this.b);return this.buffer=c};r("Zlib.RawInflate",w);r("Zlib.RawInflate.prototype.decompress",w.prototype.t);var X={ADAPTIVE:y,BLOCK:A},Y,Z,$,fa;if(Object.keys)Y=Object.keys(X);else for(Z in Y=[],$=0,X)Y[$++]=Z;$=0;for(fa=Y.length;$<fa;++$)Z=Y[$],r("Zlib.RawInflate.BufferType."+Z,X[Z]);}).call(this);
+
+
+
+\n</script>
+<script>
+const NATURAL_SAMPLE=`采购40台仓库工业标签打印机，要求打印分辨率不低于300 dpi，必须支持有线网络；合同生效后15个工作日内送达并完成安装；整机保修3年；40台全部完成安装调试；至少培训1场；验收后付款优先。
+供应商青岳：适用40台，300 dpi，有线网络，设备单价4700元/台，运费8000元，安装调试12000元，强制服务费0元，培训1场免费，12个工作日内完成交付安装，整机保修3年，验收后30天付款。
+供应商澄海：适用40台，300 dpi，有线网络，设备单价5050元/台，运费已包含，安装调试已包含，强制服务费0元，培训2场免费，10个工作日内完成交付安装，整机保修3年，50%预付，50%验收后付款。
+供应商北川：适用40台，203 dpi，有线网络，设备单价4700元/台，运费7000元，安装调试12000元，培训1场免费，8个工作日内完成交付安装，整机保修3年，验收后30天付款。
+供应商远屿：适用40台，300 dpi，有线网络，设备单价4800元/台，运费已包含，安装调试10000元，培训1场免费，20个工作日内完成交付安装，整机保修3年，验收后60天付款。
+供应商星拓：适用40台，300 dpi，无线网络，设备单价4600元/台，运费6000元，安装调试18000元，培训1场免费，14个工作日内完成交付安装，整机保修4年，验收后30天付款。`;
+const SAMPLE={
+  "需求":{"数量":40,"分辨率下限":300,"网络":"有线网络","交付上限工作日":15,"保修下限年":3,"安装必须":true,"培训最少场次":1},
+  "供应商":[
+    {"供应商":"青岳","适用数量":40,"分辨率":300,"网络":"有线网络","设备单价":4700,"运费":8000,"安装调试":12000,"强制服务费":0,"培训场次":1,"培训费用":0,"交付工作日":12,"交付含安装":true,"保修年":3,"付款方式":"验收后30天","付款类型":"验收后付款"},
+    {"供应商":"澄海","适用数量":40,"分辨率":300,"网络":"有线网络","设备单价":5050,"运费":"已包含","安装调试":"已包含","强制服务费":0,"培训场次":2,"培训费用":0,"交付工作日":10,"交付含安装":true,"保修年":3,"付款方式":"50%预付，50%验收后","付款类型":"部分预付"},
+    {"供应商":"北川","适用数量":40,"分辨率":203,"网络":"有线网络","设备单价":4700,"运费":7000,"安装调试":12000,"强制服务费":0,"培训场次":1,"培训费用":0,"交付工作日":8,"交付含安装":true,"保修年":3,"付款方式":"验收后30天","付款类型":"验收后付款"},
+    {"供应商":"远屿","适用数量":40,"分辨率":300,"网络":"有线网络","设备单价":4800,"运费":"已包含","安装调试":10000,"强制服务费":0,"培训场次":1,"培训费用":0,"交付工作日":20,"交付含安装":true,"保修年":3,"付款方式":"验收后60天","付款类型":"验收后付款"},
+    {"供应商":"星拓","适用数量":40,"分辨率":300,"网络":"无线网络","设备单价":4600,"运费":6000,"安装调试":18000,"强制服务费":0,"培训场次":1,"培训费用":0,"交付工作日":14,"交付含安装":true,"保修年":4,"付款方式":"验收后30天","付款类型":"验收后付款"}
+  ]
+};
+const $=id=>document.getElementById(id); const money=n=>typeof n==='number'&&Number.isFinite(n)?n.toLocaleString('zh-CN')+' 元':'待确认';
+function amount(v){return typeof v==='number'&&Number.isFinite(v)?v:0}
+function containsWired(v){return typeof v==='string'&&v.includes('有线')}
+function num(text,re){const m=text.match(re);return m?Number(m[1]):undefined}
+function parseMoney(text,label){const m=text.match(new RegExp(label+'[^\\d]*(\\d[\\d,]*)\\s*元','i'));return m?Number(m[1].replace(/,/g,'')):undefined}
+function parseNaturalLanguage(text){
+  const qty=num(text,/(?:采购|数量|共)\s*(?:为|是)?\s*(\d+)\s*台/), dpi=num(text,/(?:打印分辨率|分辨率)[^\d]*(\d+)\s*dpi/i), days=num(text,/(?:交付|交期|送达)[^\d]*(\d+)\s*个?工作日/)||num(text,/(\d+)\s*个?工作日/), warranty=num(text,/(?:整机)?保修[^\d]*(\d+)\s*年/), training=num(text,/(?:至少)?培训[^\d]*(\d+)\s*场/);
+  const demand={数量:qty,分辨率下限:dpi,网络:text.includes('有线')?'有线网络':undefined,交付上限工作日:days,保修下限年:warranty,安装必须:text.includes('安装')?true:undefined,培训最少场次:training,付款偏好:text.includes('验收后')?'验收后付款优先':undefined};
+  const matches=[...text.matchAll(/(?:^|[。\n；;])\s*供应商\s*([^：:，,\n]+)\s*[：:]/g)];
+  if(!matches.length) throw new Error('未识别到供应商。请使用“供应商名称：报价信息”的格式。');
+  const vendors=matches.map((m,i)=>{const start=m.index+m[0].length,end=i+1<matches.length?matches[i+1].index+matches[i+1][0].indexOf('供应商'):text.length, block=text.slice(start,end), name=m[1].trim();
+    const v={供应商:name,适用数量:num(block,/(?:适用数量|数量)[^\d]*(\d+)\s*台/)||qty,分辨率:num(block,/(\d+)\s*dpi/i),网络:block.includes('有线')?'有线网络':block.includes('无线')?'无线网络':undefined,设备单价:parseMoney(block,'设备单价'),运费:block.includes('运费已包含')?'已包含':parseMoney(block,'运费'),安装调试:block.includes('安装调试已包含')?'已包含':parseMoney(block,'安装调试'),强制服务费:parseMoney(block,'强制服务费')||0,培训场次:num(block,/培训[^\d]*(\d+)\s*场/)||0,培训费用:block.includes('培训')&&block.includes('免费')?0:parseMoney(block,'培训'),交付工作日:num(block,/(\d+)\s*个?工作日/),交付含安装:block.includes('完成交付安装')||block.includes('送达并完成安装'),保修年:num(block,/(?:整机)?保修[^\d]*(\d+)\s*年/),付款方式:(block.match(/([^。；，,]*?(?:预付|验收后)[^。；，,]*?付款)/)||[])[1]||'未提供',付款类型:block.includes('预付')?'部分预付':block.includes('验收后')?'验收后付款':undefined};
+    return v;
+  });
+  return {需求:demand,供应商:vendors};
+}
+function parseInput(text){const t=text.trim();return t.startsWith('{')?JSON.parse(t):parseNaturalLanguage(t)}
+function parseRequirement(text){
+  const qty=num(text,/(?:采购|数量|共|需要)\s*(?:为|是)?\s*(\d+)\s*台/), dpi=num(text,/(?:打印分辨率|分辨率)[^\d]*(\d+)\s*dpi/i), days=num(text,/(?:交付|交期|送达)[^\d]*(\d+)\s*个?工作日/)||num(text,/(\d+)\s*个?工作日/), warranty=num(text,/(?:整机)?保修[^\d]*(\d+)\s*年/), training=num(text,/(?:至少)?培训[^\d]*(\d+)\s*场/);
+  if(!qty&&!dpi&&!days&&!warranty&&!training&&!text.includes('有线网络')) throw new Error('暂未识别到采购需求，请至少提供数量、规格、交付或保修要求。');
+  return {数量:qty||undefined,分辨率下限:dpi||undefined,网络:text.includes('有线')?'有线网络':undefined,交付上限工作日:days||undefined,保修下限年:warranty||undefined,安装必须:text.includes('安装')?true:undefined,培训最少场次:training||undefined,付款偏好:text.includes('验收后')?'验收后付款优先':undefined};
+}
+function cellNum(s,re){const m=String(s||'').match(re);return m?Number(m[1].replace(/,/g,'')):undefined}
+function normalizeHeader(s){return String(s||'').replace(/[\s（）()_\-]/g,'').toLowerCase()}
+function findCol(headers,aliases){const hs=headers.map(normalizeHeader);for(const a of aliases){const n=normalizeHeader(a),i=hs.findIndex(h=>h===n||h.includes(n)||n.includes(h));if(i>=0)return i}return -1}
+function colValue(vals,index){return index>=0?String(vals[index]??'').trim():''}
+function parseAnyNumber(value){const m=String(value??'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):undefined}
+function isIncluded(value){return /已包含|已含|包含|免费|含在/.test(String(value||''))}
+function parseSupplierRows(headers,dataRows,qty){
+  const idx={vendor:findCol(headers,['供应商','供应商名称','厂商','厂家','报价方']),quantity:findCol(headers,['适用数量','报价数量','数量']),dpi:findCol(headers,['分辨率','打印分辨率','dpi']),network:findCol(headers,['网络','网络接口','连接方式']),unit:findCol(headers,['设备单价','含税单价','单价','设备价格','报价','含税价格']),freight:findCol(headers,['运费','运输费','物流费']),install:findCol(headers,['安装调试','安装费','调试费']),service:findCol(headers,['强制服务费','强制服务','服务费']),training:findCol(headers,['培训','培训服务']),delivery:findCol(headers,['交付（合同生效后）','交付(合同生效后)','交付周期','交付时间','交期','交付']),warranty:findCol(headers,['整机保修','保修','质保','质保期']),payment:findCol(headers,['付款方式','付款条件','付款'])};
+  if(idx.vendor<0||idx.unit<0) return null;
+  return dataRows.map(vals=>{const vendor=colValue(vals,idx.vendor);if(!vendor)return null;const train=colValue(vals,idx.training),delivery=colValue(vals,idx.delivery),payment=colValue(vals,idx.payment),freight=colValue(vals,idx.freight),install=colValue(vals,idx.install),service=colValue(vals,idx.service);
+    return {供应商:vendor,适用数量:parseAnyNumber(colValue(vals,idx.quantity))??qty,分辨率:parseAnyNumber(colValue(vals,idx.dpi)),网络:colValue(vals,idx.network),设备单价:parseAnyNumber(colValue(vals,idx.unit)),运费:isIncluded(freight)?'已包含':parseAnyNumber(freight),安装调试:isIncluded(install)?'已包含':parseAnyNumber(install),强制服务费:isIncluded(service)?'已包含':parseAnyNumber(service),培训场次:parseAnyNumber(train)??(/培训|远程/.test(train)?1:undefined),培训费用:/免费/.test(train)?0:undefined,交付工作日:parseAnyNumber(delivery),交付含安装:/安装/.test(delivery)?true:undefined,保修年:parseAnyNumber(colValue(vals,idx.warranty)),付款方式:payment,付款类型:/预付|预付款|订金|首付款/.test(payment)?'部分预付':/验收后|账期|月结/.test(payment)?'验收后付款':undefined};
+  }).filter(Boolean);
+}
+function parseSupplierTable(text,qty){
+  const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean), headerIndex=lines.findIndex(x=>x.includes('|')&&/供应商|厂商|厂家|报价方/.test(x)&&/设备单价|含税单价|单价|设备价格|报价/.test(x));
+  if(headerIndex<0)return null;
+  const headers=lines[headerIndex].split('|').map(x=>x.trim()), dataRows=lines.slice(headerIndex+1).filter(x=>x.includes('|')&&!/^\|?\s*:?-+/.test(x)).map(x=>x.split('|').map(v=>v.trim()));
+  return parseSupplierRows(headers,dataRows,qty);
+}
+function parseSuppliers(text,qty){
+  const t=text.trim(); if(t.startsWith('{')){const j=JSON.parse(t);return j.供应商||[]}
+  const table=parseSupplierTable(t,qty); if(table) return table;
+  return parseNaturalLanguage('采购'+qty+'台，300 dpi，有线网络，15个工作日内完成安装，保修3年，培训至少1场。\\n'+t).供应商;
+}
+async function unzipXlsx(file){
+  const bytes=new Uint8Array(await file.arrayBuffer()), view=new DataView(bytes.buffer), entries={};
+  let eocd=-1; for(let i=bytes.length-22;i>=Math.max(0,bytes.length-66000);i--){if(view.getUint32(i,true)===0x06054b50){eocd=i;break}}
+  if(eocd<0) throw new Error('不是有效的 .xlsx 文件。');
+  const total=view.getUint16(eocd+10,true), cdOffset=view.getUint32(eocd+16,true); let p=cdOffset;
+  for(let i=0;i<total;i++){if(view.getUint32(p,true)!==0x02014b50) throw new Error('Excel 压缩结构无法读取。'); const method=view.getUint16(p+10,true), compSize=view.getUint32(p+20,true), nameLen=view.getUint16(p+28,true), extraLen=view.getUint16(p+30,true), commentLen=view.getUint16(p+32,true), localOffset=view.getUint32(p+42,true), name=new TextDecoder().decode(bytes.slice(p+46,p+46+nameLen)); const lp=localOffset, lf=view.getUint16(lp+26,true), le=view.getUint16(lp+28,true), raw=bytes.slice(lp+30+lf+le,lp+30+lf+le+compSize); let data; if(method===0)data=raw; else if(method===8){try{if(typeof DecompressionStream!=='undefined'){const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));data=new Uint8Array(await new Response(stream).arrayBuffer())}}catch(e){data=null}if(!data&&typeof Zlib!=='undefined'&&Zlib.RawInflate)data=new Uint8Array(new Zlib.RawInflate(raw).decompress());if(!data)data=inflateRawDeflate(raw)} else throw new Error('Excel 使用了暂不支持的压缩方式。'); entries[name]=new TextDecoder().decode(data);p+=46+nameLen+extraLen+commentLen}
+  return entries;
+}
+function inflateRawDeflate(data){
+  let pos=0, bitbuf=0, bits=0; const out=[];
+  function readBits(n){while(bits<n){bitbuf|=(data[pos++]||0)<<bits;bits+=8}const v=bitbuf&((1<<n)-1);bitbuf>>>=n;bits-=n;return v}
+  function align(){bitbuf=0;bits=0}
+  function reverseBits(v,n){let r=0;for(let i=0;i<n;i++){r=(r<<1)|(v&1);v>>>=1}return r}
+  function tree(lengths){const count=new Uint32Array(16),next=new Uint32Array(16),map=new Map();for(const n of lengths)if(n)count[n]++;let code=0;for(let n=1;n<=15;n++){code=(code+count[n-1])<<1;next[n]=code}for(let sym=0;sym<lengths.length;sym++){const n=lengths[sym];if(n){const c=reverseBits(next[n]++,n);map.set(c+':'+n,sym)}}return map}
+  function decode(t){let c=0;for(let n=1;n<=15;n++){c|=readBits(1)<<(n-1);const s=t.get(c+':'+n);if(s!==undefined)return s}throw new Error('无法解码 Excel 压缩数据。')}
+  const lenBase=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],lenExtra=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],distBase=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],distExtra=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  let last=0;while(!last){last=readBits(1);const type=readBits(2);if(type===0){align();const len=readBits(16),nlen=readBits(16);if((len^0xffff)!==nlen)throw new Error('Excel 压缩数据校验失败。');for(let i=0;i<len;i++)out.push(data[pos++]);continue}if(type===3)throw new Error('Excel 使用了不支持的压缩块。');let lt,dt;if(type===1){const ll=[];for(let i=0;i<=143;i++)ll.push(8);for(let i=144;i<=255;i++)ll.push(9);for(let i=256;i<=279;i++)ll.push(7);for(let i=280;i<=287;i++)ll.push(8);const dl=new Array(32).fill(5);lt=tree(ll);dt=tree(dl)}else{const hlit=readBits(5)+257,hdist=readBits(5)+1,hclen=readBits(4)+4,order=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15],cl=new Array(19).fill(0);for(let i=0;i<hclen;i++)cl[order[i]]=readBits(3);const ct=tree(cl),all=[];while(all.length<hlit+hdist){const s=decode(ct);if(s<=15)all.push(s);else if(s===16){const repeat=readBits(2)+3,prev=all[all.length-1]||0;for(let j=0;j<repeat;j++)all.push(prev)}else if(s===17){for(let j=0;j<readBits(3)+3;j++)all.push(0)}else{for(let j=0;j<readBits(7)+11;j++)all.push(0)}}lt=tree(all.slice(0,hlit));dt=tree(all.slice(hlit,hlit+hdist))}while(true){const s=decode(lt);if(s<256){out.push(s);continue}if(s===256)break;const li=s-257,ln=lenBase[li]+readBits(lenExtra[li]),ds=decode(dt),dist=distBase[ds]+readBits(distExtra[ds]);for(let j=0;j<ln;j++)out.push(out[out.length-dist])}}return new Uint8Array(out)
+}
+function xmlText(xml){return new DOMParser().parseFromString(xml,'application/xml')}
+async function parseXlsx(file,qty){
+  const z=await unzipXlsx(file), sharedDoc=z['xl/sharedStrings.xml']?xmlText(z['xl/sharedStrings.xml']):null, shared=sharedDoc?Array.from(sharedDoc.getElementsByTagNameNS('*','si')).map(si=>Array.from(si.getElementsByTagNameNS('*','t')).map(t=>t.textContent).join('')):[], sheetName=Object.keys(z).find(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)), sheet=sheetName?z[sheetName]:null; if(!sheet) throw new Error('未找到可读取的工作表。');
+  const doc=xmlText(sheet), matrix=[]; for(const row of Array.from(doc.getElementsByTagNameNS('*','row'))){const out=[]; for(const c of Array.from(row.getElementsByTagNameNS('*','c'))){const ref=c.getAttribute('r')||''; const letters=(ref.match(/[A-Z]+/)||['A'])[0]; let col=0; for(const ch of letters)col=col*26+ch.charCodeAt(0)-64; col--; const t=c.getAttribute('t'), vnode=c.getElementsByTagNameNS('*','v')[0], inline=c.getElementsByTagNameNS('*','t')[0]; let val=vnode?vnode.textContent:''; if(t==='s')val=shared[Number(val)]||''; else if(t==='inlineStr')val=inline?inline.textContent:''; out[col]=val} matrix.push(out)}
+  const lines=matrix.filter(r=>r.some(v=>String(v||'').trim())).map(r=>r.map(v=>String(v??'')).join(' | ')).join('\n'); const vendors=parseSupplierTable(lines,qty); if(!vendors)throw new Error('未识别到供应商报价列。请确认第一行包含“供应商”和“设备单价”等列头。'); return vendors;
+}
+function analyzeLegacy(data){
+  if(!data||!data.需求||!Array.isArray(data.供应商)||!data.供应商.length) throw new Error('需要包含“需求”和非空“供应商”数组。');
+  const r=data.需求, qty=Number(r.数量), rows=data.供应商.map(v=>{
+    const equipment=amount(v.设备单价)*qty, freight=amount(v.运费), install=amount(v.安装调试), service=amount(v.强制服务费), other=amount(v.培训费用), total=equipment+freight+install+service+other;
+    const checks={数量:v.适用数量>=qty?'满足':'不满足',分辨率:v.分辨率>=Number(r.分辨率下限)?'满足':'不满足',有线网络:containsWired(v.网络)?'满足':'不满足',交付并安装:v.交付工作日<=Number(r.交付上限工作日)&&v.交付含安装===true?'满足':v.交付工作日<=Number(r.交付上限工作日)&&v.交付含安装!==false?'待确认':'不满足',整机保修:v.保修年>=Number(r.保修下限年)?'满足':'不满足',安装调试:v.安装调试!==undefined?'满足':'待确认',培训:Number(v.培训场次)>=Number(r.培训最少场次)?'满足':'待确认'};
+    const reasons=[]; if(checks.数量==='不满足')reasons.push(`适用数量 ${v.适用数量} < ${qty} 台`); if(checks.分辨率==='不满足')reasons.push(`${v.分辨率} dpi < ${r.分辨率下限} dpi`); if(checks.有线网络==='不满足')reasons.push('网络不支持有线网络'); if(checks.交付并安装==='不满足')reasons.push(`${v.交付工作日} 个工作日 > ${r.交付上限工作日} 个工作日或未承诺完成安装`); if(checks.整机保修==='不满足')reasons.push(`${v.保修年} 年 < ${r.保修下限年} 年`); if(checks.安装调试==='待确认')reasons.push('未提供安装调试信息'); if(checks.培训==='待确认')reasons.push('未提供至少 1 场培训信息');
+    const qualification=Object.values(checks).includes('不满足')?'不合格':Object.values(checks).includes('待确认')?'有条件合格':'合格';
+    return {...v,checks,qualification,reasons,equipment,freight,install,service,other,total};
+  });
+  const qualified=rows.filter(x=>x.qualification==='合格'), min=qualified.length?Math.min(...qualified.map(x=>x.total)):0;
+  rows.forEach(x=>{x.costRank=1+rows.filter(y=>y.total<x.total).length; if(x.qualification==='合格'){const cost=min/x.total*40; const pay=x.付款类型==='验收后付款'?25:x.付款类型==='部分预付'?12.5:0; const day=Number(x.交付工作日); const delivery=day<=10?20:day<=12?18:day<=15?15:0; const warranty=Number(x.保修年)>3?10:8; const training=Number(x.培训场次)>=Number(r.培训最少场次)&&amount(x.培训费用)===0?5:2; x.scores={cost,pay,delivery,warranty,training,total:cost+pay+delivery+warranty+training};} });
+  const ranked=[...qualified].sort((a,b)=>b.scores.total-a.scores.total||a.total-b.total||a.交付工作日-b.交付工作日), rec=ranked[0], lowest=qualified.sort((a,b)=>a.total-b.total)[0];
+  return {r,rows,qualified,rec,lowest};
+}
+function hasValue(v){return v!==undefined&&v!==null&&String(v).trim()!==''}
+function analyze(data){
+  if(!data||!data.需求||!Array.isArray(data.供应商)||!data.供应商.length) throw new Error('需要包含“需求”和非空“供应商”数组。');
+  const r=data.需求, qty=Number(r.数量), reqDpi=Number(r.分辨率下限), reqDays=Number(r.交付上限工作日), reqWarranty=Number(r.保修下限年), reqTraining=Number(r.培训最少场次);
+  const rows=data.供应商.map(v=>{
+    const equipment=hasValue(v.设备单价)&&Number.isFinite(qty)?Number(v.设备单价)*qty:null, freight=hasValue(v.运费)?amount(v.运费):null, install=hasValue(v.安装调试)?amount(v.安装调试):null, service=hasValue(v.强制服务费)?amount(v.强制服务费):null, other=hasValue(v.培训费用)?amount(v.培训费用):null;
+    const costReady=[equipment,freight,install,service,other].every(x=>typeof x==='number'), total=costReady?equipment+freight+install+service+other:null;
+    const checks={数量:!hasValue(v.适用数量)||!Number.isFinite(qty)?'待确认':v.适用数量>=qty?'满足':'不满足',分辨率:!hasValue(v.分辨率)||!Number.isFinite(reqDpi)?'待确认':v.分辨率>=reqDpi?'满足':'不满足',有线网络:!hasValue(v.网络)||!hasValue(r.网络)?'待确认':containsWired(v.网络)?'满足':'不满足',交付并安装:!hasValue(v.交付工作日)||!Number.isFinite(reqDays)||v.交付含安装===undefined?'待确认':v.交付工作日>reqDays||v.交付含安装===false?'不满足':'满足',整机保修:!hasValue(v.保修年)||!Number.isFinite(reqWarranty)?'待确认':v.保修年>=reqWarranty?'满足':'不满足',安装调试:!hasValue(v.安装调试)?'待确认':'满足',培训:!hasValue(v.培训场次)||!Number.isFinite(reqTraining)?'待确认':v.培训场次>=reqTraining?'满足':'不满足'};
+    const reasons=[]; if(checks.数量==='不满足')reasons.push('适用数量 '+v.适用数量+' 台 < 需求 '+qty+' 台'); if(checks.分辨率==='不满足')reasons.push(v.分辨率+' dpi < 要求 '+reqDpi+' dpi'); if(checks.有线网络==='不满足')reasons.push('网络不支持有线网络'); if(checks.交付并安装==='不满足')reasons.push('交付周期或安装承诺不满足要求'); if(checks.整机保修==='不满足')reasons.push(v.保修年+' 年 < 要求 '+reqWarranty+' 年'); if(checks.安装调试==='待确认')reasons.push('未提供安装调试费用或范围'); if(checks.培训==='待确认')reasons.push('未提供培训场次或费用'); if(!costReady)reasons.push('总成本存在未提供的费用字段，暂不能形成完整总价');
+    const qualification=Object.values(checks).includes('不满足')?'不合格':Object.values(checks).includes('待确认')?'有条件合格':'合格';
+    return {...v,checks,qualification,reasons,equipment,freight,install,service,other,total,costReady};
+  });
+  const qualified=rows.filter(x=>x.qualification==='合格'), costReadyQualified=qualified.filter(x=>x.costReady), min=costReadyQualified.length?Math.min(...costReadyQualified.map(x=>x.total)):null;
+  rows.forEach(x=>{x.costRank=typeof x.total==='number'?1+rows.filter(y=>typeof y.total==='number'&&y.total<x.total).length:'待确认'; if(x.qualification==='合格'&&x.costReady){const cost=min/x.total*40, pay=x.付款类型==='验收后付款'?25:x.付款类型==='部分预付'?12.5:0, day=Number(x.交付工作日), delivery=day<=10?20:day<=12?18:day<=15?15:0, warranty=Number(x.保修年)>3?10:8, training=Number(x.培训场次)>=reqTraining&&amount(x.培训费用)===0?5:2; x.scores={cost,pay,delivery,warranty,training,total:cost+pay+delivery+warranty+training};} });
+  const ranked=[...costReadyQualified].sort((a,b)=>b.scores.total-a.scores.total||a.total-b.total||a.交付工作日-b.交付工作日), rec=ranked[0], lowest=costReadyQualified.sort((a,b)=>a.total-b.total)[0];
+  return {r,rows,qualified,rec,lowest};
+}
+function pill(v){return `<span class="pill ${v==='满足'||v==='合格'?'ok':v==='不满足'||v==='不合格'?'bad':'warn'}">${v}</span>`}
+function render(a,data){
+  const {r,rows,qualified,rec,lowest}=a; const dis=rows.filter(x=>x.qualification!=='合格');
+  const normalized=JSON.stringify(data,null,2).replace(/</g,'&lt;');
+  let h=`<div class="summary"><div class="metric"><div class="label">推荐方案</div><div class="value">${rec?rec.供应商:'无'}</div></div><div class="metric"><div class="label">推荐总成本</div><div class="value">${rec?money(rec.total):'—'}</div></div><div class="metric"><div class="label">最低合格报价</div><div class="value">${lowest?lowest.供应商:'无'}</div></div><div class="metric"><div class="label">合格供应商</div><div class="value">${qualified.length} 家</div></div></div>`;
+  h='<details class="section"><summary><b>零、自然语言转换后的标准 JSON</b></summary><pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;max-height:300px;overflow:auto">'+normalized+'</pre></details>'+h;
+  if(rec){const diff=rec.total-lowest.total; h+=`<div class="callout"><b>推荐：${rec.供应商}</b>（风险调整评分 ${rec.scores.total.toFixed(2)} 分）。${rec.供应商===lowest.供应商?'同时为最低合格总成本方案。':`最低合格报价为 ${lowest.供应商}（${money(lowest.total)}），${rec.供应商} 高 ${money(diff)}；选择 ${rec.供应商} 的主要原因是付款条件和整体履约风险更优。`}</div>`} else h+=`<div class="callout"><b>暂无可直接推荐方案。</b>所有供应商均不合格或关键字段待确认。</div>`;
+  h+=`<div class="section"><h2>一、统一口径成本对比</h2><div class="table-wrap"><table><thead><tr><th>供应商</th><th>设备小计</th><th>运费</th><th>安装调试</th><th>强制服务费</th><th>其他已知费用</th><th>含税总成本</th><th>成本排名</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.供应商}</td><td>${money(x.equipment)}</td><td>${typeof x.运费==='number'?money(x.freight):x.运费||'未提供'}</td><td>${typeof x.安装调试==='number'?money(x.install):x.安装调试||'未提供'}</td><td>${money(x.service)}</td><td>${money(x.other)}</td><td><b>${money(x.total)}</b></td><td>${x.costRank}</td></tr>`).join('')}</tbody></table></div></div>`;
+  h+=`<div class="section"><h2>二、硬性要求校验</h2><div class="table-wrap"><table><thead><tr><th>供应商</th><th>数量</th><th>分辨率</th><th>有线网络</th><th>交付并安装</th><th>保修</th><th>安装调试</th><th>培训</th><th>资格结论</th><th>具体问题</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.供应商}</td>${Object.values(x.checks).map(y=>`<td>${pill(y)}</td>`).join('')}<td>${pill(x.qualification)}</td><td>${x.reasons.join('；')||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  h+=`<div class="section"><h2>三、商务、交付与评分</h2><div class="table-wrap"><table><thead><tr><th>供应商</th><th>交付</th><th>付款方式</th><th>付款评分</th><th>交付评分</th><th>总评分</th><th>判断</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.供应商}</td><td>${x.交付工作日} 个工作日${x.交付含安装?'，含安装':'，安装范围待确认'}</td><td>${x.付款方式||'未提供'}</td><td>${x.scores?x.scores.pay:'—'}</td><td>${x.scores?x.scores.delivery:'—'}</td><td><b>${x.scores?x.scores.total.toFixed(2):'—'}</b></td><td>${x.qualification==='不合格'?'<span class="bad">不进入推荐</span>':x.scores&&x===rec?'<span class="ok">推荐</span>':x.qualification}</td></tr>`).join('')}</tbody></table></div></div>`;
+  h+=`<div class="section"><h2>四、风险、整改建议与无法判断原因</h2>`;
+  rows.forEach(x=>{const risks=[]; if(x.qualification==='不合格')risks.push(['high',`触发硬性规则：${x.reasons.join('；')}`,'不得推荐，采购需剔除或要求供应商重新报价/补充符合性证明。']); if(x.付款类型==='部分预付')risks.push(['','50% 预付，偏离验收后付款偏好','增加采购方资金占用与未验收先付款风险；建议改为验收后付款，或要求预付款保障。']); if(x.qualification==='合格'&&Number(r.交付上限工作日)-Number(x.交付工作日)<=3)risks.push(['','交付缓冲仅 '+(Number(r.交付上限工作日)-Number(x.交付工作日))+' 个工作日','延期会直接影响上线；建议写入逾期责任和安装验收节点。']); if(risks.length){h+=`<div class="risk ${risks[0][0]}"><b>${x.供应商}</b>${risks.map(z=>`<div>风险等级：${z[0]==='high'?'高':z[0]?'低':'中'}｜事实：${z[1]}<br>建议动作：${z[2]}</div>`).join('')}</div>`}});
+  h+=`</div><div class="section"><h2>五、推荐方案与理由</h2>`;
+  if(rec){h+=`<div class="callout"><b>推荐方案：${rec.供应商}</b><br>推荐评分：${rec.scores.total.toFixed(2)} / 100<br><ul><li>满足全部硬性要求：${rec.分辨率} dpi、有线网络、${rec.交付工作日} 个工作日完成交付安装、${rec.保修年} 年整机保修。</li><li>含税总成本为 ${money(rec.total)}；最低合格报价为 ${lowest.供应商} 的 ${money(lowest.total)}。</li><li>付款条件为“${rec.付款方式}”，相较部分预付方案履约风险更低。</li></ul><b>主要让步/代价：</b>${rec===lowest?'无价格让步。':'比最低合格报价高 '+money(rec.total-lowest.total)+'。'}<br><b>合同前置条件：</b>将全量安装调试、培训、交付日期、保修年限和验收标准写入合同；${rec.付款类型==='验收后付款'?'保持验收后付款。':'争取改为验收后付款或增加预付款保障。'}<br><b>备选方案：</b>${lowest&&lowest!==rec?lowest.供应商+'，前提是解决付款/履约风险。':'无。'}</div>`} else h+='<div class="risk high">没有可推荐供应商，请先补充或修正报价。</div>';
+  h+=`</div><div class="section"><h2>六、待确认事项</h2>`;
+  const confirm=[]; rows.forEach(x=>{const missing=[]; if(x.checks.数量==='待确认')missing.push('适用数量（Excel 单元格为空或无法识别）'); if(x.checks.分辨率==='待确认')missing.push('分辨率（Excel 单元格为空或无法识别，无法判断是否满足 '+(r.分辨率下限??'采购要求')+' dpi）'); if(x.checks.有线网络==='待确认')missing.push('网络（Excel 单元格为空或采购需求未明确）'); if(x.checks.交付并安装==='待确认'){if(!hasValue(x.交付工作日))missing.push('交付周期（Excel 单元格为空或无法识别）'); if(x.交付含安装===undefined)missing.push('交付是否包含安装（Excel 中未明确“完成安装”）')} if(x.checks.整机保修==='待确认')missing.push('整机保修（Excel 单元格为空或无法识别）'); if(x.checks.安装调试==='待确认')missing.push('安装调试费用或范围（Excel 单元格为空）'); if(x.checks.培训==='待确认')missing.push('培训场次（Excel 单元格为空或无法识别）'); if(!hasValue(x.设备单价))missing.push('设备单价（未计入总成本）'); if(!hasValue(x.运费))missing.push('运费（未计入总成本）'); if(!hasValue(x.安装调试))missing.push('安装调试费用（未计入总成本）'); if(!hasValue(x.强制服务费))missing.push('强制服务费（未计入总成本）'); if(!hasValue(x.培训费用))missing.push('培训费用（报价未说明是否免费，未计入总成本）'); [...new Set(missing)].forEach(m=>confirm.push(x.供应商+'：'+m))}); h+=confirm.length?'<ul>'+confirm.map(x=>'<li>'+x+'</li>').join('')+'</ul>':'<div class="muted">无。所有关键字段均已提供。</div>'; h+='</div>';
+  $('result').innerHTML=h;
+}
+let convoStep=1, requirementData=null;
+function addMsg(who,text,extra){const el=document.createElement('div');el.className='msg '+who;el.innerHTML=text+(extra?'<div class="schema">'+extra+'</div>':'');$('chat').appendChild(el);$('chat').scrollTop=$('chat').scrollHeight}
+function startConversation(){convoStep=1;requirementData=null;$('chat').innerHTML='';$('uploadArea').style.display='none';$('xlsxFile').value='';$('status').textContent='';$('fileStatus').textContent='';addMsg('agent','你好，我是采购报价分析助手。<br><b>请输入你的采购需求</b>，包含数量、规格、交付、保修、安装、培训和付款偏好等。');$('stepHelp').innerHTML='';$('input').placeholder='请输入你的采购需求…如：采购 40 台仓库工业标签打印机，打印分辨率≥300 dpi…'}
+function finishVendors(vendors,label){const data={需求:requirementData,供应商:vendors};addMsg('user',label);const a=analyze(data);render(a,data);addMsg('agent','已收到 '+vendors.length+' 家供应商报价，已完成标准化、硬性规则校验和风险推荐。结果已显示在右侧。');convoStep=3;$('stepHelp').innerHTML='分析完成。点击“重新开始”可以进行下一轮采购比价。';$('input').placeholder='如需分析另一批报价，请点击“重新开始”。';$('input').value='';$('uploadArea').style.display='none';$('status').textContent='分析完成：供应商信息已从 Excel/表格读取并进入固定规则分析。';$('status').style.color='#087443'}
+async function readUploaded(){const file=$('xlsxFile').files[0];if(!file){$('fileStatus').textContent='请先选择 .xlsx 文件。';return}try{$('fileStatus').textContent='正在读取 '+file.name+'…';const vendors=await parseXlsx(file,requirementData.数量||40);finishVendors(vendors,'已上传供应商文件：'+file.name);$('fileStatus').textContent='读取成功：'+vendors.length+' 家供应商。'}catch(e){$('fileStatus').textContent='Excel 读取失败：'+e.message}}
+function sendMessage(){const text=$('input').value.trim();if(!text&&convoStep!==2){$('status').textContent='请先输入内容。';return}if(convoStep===1){try{requirementData=text.startsWith('{')?JSON.parse(text).需求:parseRequirement(text);addMsg('user',text);addMsg('agent','已收到采购需求。请继续提供可选择的供应商信息（<b>可以直接上传 Excel</b>）。','供应商 | 适用数量 | 分辨率 | 网络 | 设备单价 | 运费 | 安装调试 | 强制服务费 | 培训 | 交付（合同生效后） | 整机保修 | 付款方式\n--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---');convoStep=2;$('uploadArea').style.display='block';$('stepHelp').innerHTML='';$('input').placeholder='';$('input').value='';$('status').textContent=''}catch(e){$('status').textContent='采购需求识别失败：'+e.message}}else{if(!text&&$('xlsxFile').files[0])return readUploaded();try{const vendors=parseSuppliers(text,requirementData.数量||40);finishVendors(vendors,text)}catch(e){$('status').textContent='供应商信息识别失败：'+e.message}}}
+function runSelfTest(){const data=parseNaturalLanguage(NATURAL_SAMPLE);requirementData=data.需求;convoStep=3;$('chat').innerHTML='';addMsg('agent','这是预置自测：已模拟完成采购需求和供应商信息两轮对话。');render(analyze(data),data);$('status').textContent='自测完成。';$('status').style.color='#087443'}
+$('send').onclick=sendMessage;$('readXlsx').onclick=readUploaded;$('clear').onclick=startConversation;$('input').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendMessage()}});startConversation();
+</script>
+</body>
+</html>
+
+
